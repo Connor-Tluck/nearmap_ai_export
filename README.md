@@ -3,7 +3,7 @@
 Sample Output From Program:
 
 ![alt text](
-https://github.com/Connor-Tluck/nearmap_ai_export/blob/master/template_photo.png?raw=true)
+https://github.com/Connor-Tluck/nearmap_ai_export/blob/master/template_photo.png?raw=true | 25x25)  
 
 This code is modified form the Nearmaps doc page witten by Michael Bewley.
 
