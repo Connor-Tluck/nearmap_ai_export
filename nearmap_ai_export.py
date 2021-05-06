@@ -14,8 +14,18 @@ import geopandas as gpd
 import shapely.geometry
 import shapely.wkt
 from IPython.display import display
-
+import re
+import tkinter as tk
+from tkinter import filedialog
+import sys
 import matplotlib.colors
+from matplotlib import pyplot as plt
+
+application_window = tk.Tk()
+
+
+input_file_types = [('all files', '.*'), ('geojson', '.geojson')]
+output_file_types = [('all files', '.*'), ('text files', '.txt')]
 
 
 
@@ -33,19 +43,66 @@ while True:
         break
 print("Thanks, your api key was set as: " + key)
 
+
+#user select the geojson file to process
+file_path = filedialog.askopenfilename(parent=application_window,
+                                    initialdir=os.getcwd(),
+                                    title="Please select a GEOJSON file, 3D files will be converted",
+                                    filetypes=input_file_types)
+with open(file_path) as f:
+    data = json.loads(f.read())
+    print("Thanks, your geojson is loaded ")
+    print(data)
+    
+    bounding_box = data['features'][0]['geometry']['coordinates'][0]
+    if len(data['features'][0]['geometry']['coordinates'][0][0]) == 3:
+        two_2d_bounding_box = []
+        for i in bounding_box:
+            two_2d_bounding_box.append(i[0:2])
+        bounding_box = two_2d_bounding_box
+    else:
+        bounding_box = data['features'][0]['geometry']['coordinates'][0]
+bounding_box
+
+def geometry_convert(bounding_box):
+    out_string = ''
+    for i in bounding_box:
+        out_string += str(i[0])
+        out_string += ' '
+        out_string += str(i[1])
+        out_string += ', '
+    out_string = out_string[:-2]
+    return(out_string)
+
+bounding_box = geometry_convert(bounding_box)
+
+
+
+file_defined_name = filedialog.asksaveasfilename(parent=application_window,
+                                      initialdir=os.getcwd(),
+                                      title="Please select a file name for saving:",
+                                      filetypes=output_file_types)
+
+
 while True:
     try:
         # Note: Python 2.x users should use raw_input, the equivalent of 3.x's input
-        bounding_box = str(input("Input Bounding Box Coordinates in this format: (x y, x y, x y, x y, x y)"))
+        projection = str(input("Please your ESPG code"))
     except ValueError:
         print("Sorry, I didn't understand that.")
         #better try again... Return to the start of the loop
         continue
     else:
+        if projection == '':
+            projection = '4326'
+            print('Default Projection System Choosen, 4326')
+            break
+        else:
         #age was successfully parsed!
         #we're ready to exit the loop.
-        break
-print("Thanks, your bounding box is: " + bounding_box)
+            print("Thanks, your epsg number was set as: " + projection)
+            break
+
 
 
 pd.set_option('max_colwidth', 80)
@@ -90,7 +147,7 @@ def get_payload(request_string):
 
 df_parcels = [
 
-    {'parcel_id': 1, 'description': 'Sandy AOI rur', 'geometry': 'Polygon ((' + bounding_box + '))'}
+    {'parcel_id': 1, 'description': file_defined_name, 'geometry': 'Polygon ((' + bounding_box + '))'}
 ]
 
 df_parcels = pd.DataFrame(df_parcels).set_index('parcel_id')
@@ -120,10 +177,11 @@ polygon = poly2coordstring(poly_obj)
 display(f'API formatted Query AOI: {polygon}')
 
 # Specify the optional date range, fixed for now
-SINCE, UNTIL = ('2016-01-01', '2020-12-31')
+SINCE, UNTIL = ('2016-01-01', '2021-03-31')
 
 # Specify the AI Packs. This list represents all AI Packs that are currently available.
 PACKS = ','.join(['pool', 'solar', 'building', 'building_char', 'roof_char', 'construction', 'trampoline', 'vegetation', 'surfaces'])
+
 
 request_string = f"{FEATURES_URL}?polygon={polygon}&since={SINCE}&until={UNTIL}&packs={PACKS}&apikey={API_KEY}"
 response = s.get(request_string)
@@ -182,6 +240,10 @@ def get_parcel_as_geodataframe(payload, parcel_poly):
         df_features.append(feature_tmp)
 
     df_features = gpd.GeoDataFrame(df_features, crs='EPSG:4326')
+    projection_string = 'EPSG:' + projection
+    df_features = df_features.to_crs(projection_string)
+
+
     df_features['description'] = pd.Categorical(df_features.description)
     df_features = df_features.sort_values('description')
     return df_features
@@ -194,7 +256,7 @@ def process_payload(payload, poly_obj, out_name, save=True):
     df_features = get_parcel_as_geodataframe(payload, poly_obj)
 
     if save:
-        with open(f"{out_name}.json", 'w') as f:
+        with open(f"{file_defined_name}.json", 'w') as f:
             json.dump(payload, f)
 
         df_features_saveable = (df_features.assign(
@@ -202,8 +264,37 @@ def process_payload(payload, poly_obj, out_name, save=True):
         ))
         if len(df_features) > 1: # Not just parcel polygon
             df_features_saveable['attributes'] = df_features_saveable.attributes.apply(lambda j: json.dumps(j, indent=2)) # Render attributes as string so it can be saved as a geopackage
-        df_features_saveable.to_file(f"{out_name}.gpkg", driver="GPKG")
+        df_features_saveable.to_file(f"{file_defined_name}.gpkg", driver="GPKG")
     return df_features
+
+def process_payload_parse(payload, poly_obj, out_name, save=True):
+    '''
+    Visualise payload as a dataframe and plot, and export as a geopackage file.
+    '''
+
+    df_features = get_parcel_as_geodataframe(payload, poly_obj)
+
+    if save:
+        feature_divided_dict = {}
+        for key in df_features['description'].unique():
+            current_key_df = df_features[df_features['description'] == key]
+            feature_divided_dict[key] = current_key_df
+    
+        for attribute in feature_divided_dict:
+            df_features = feature_divided_dict[attribute]
+
+            with open(file_defined_name + "_" + f"{attribute}.json", 'w') as f:
+                json.dump(payload, f)
+
+            df_features_saveable = (df_features.assign(
+                description=df_features.description.astype('str'),
+            ))
+            df_features_saveable['attributes'] = df_features_saveable.attributes.apply(lambda j: json.dumps(j, indent=2)) # Render attributes as string so it can be saved as a geopackage
+            df_features_saveable.to_file(file_defined_name + "_" + f"{attribute}.gpkg", driver="GPKG")
+
+    
+    return df_features
+
 
 
 def plot_query_aoi(df_features, class_list=class_list, min_confidence=0.3):
@@ -215,8 +306,11 @@ def plot_query_aoi(df_features, class_list=class_list, min_confidence=0.3):
      .loc[df_features.confidence > min_confidence]
      .plot(figsize=(20,20), cmap=cmap, column='description', legend=True, categorical=True)
     )
+    
+    fig1 = plt.gcf()
     plt.show()
-
+    plt.draw()
+    fig1.savefig(file_defined_name+'.png')
 
 def explore_example_parcel(ind, df_request_polygons, since=SINCE, until=UNTIL, packs=PACKS):
     '''
@@ -235,7 +329,10 @@ def explore_example_parcel(ind, df_request_polygons, since=SINCE, until=UNTIL, p
     logging.info(f'System version: {payload["systemVersion"]}')
     logging.debug(f'Payload: {payload}')
 
+    
+    df_features = process_payload_parse(payload, poly_obj, f'sample_payload_{desc}', save=True)
     df_features = process_payload(payload, poly_obj, f'sample_payload_{desc}', save=True)
+
     plot_query_aoi(df_features)
 
     return df_features
@@ -265,5 +362,5 @@ def remove_exterior_features(df_features, albers_proj, frac_of_parcel_filled_by_
     df_features = df_features.query('keep')
     return df_features
 
-df_features_rural = explore_example_parcel(1, df_parcels)
-df_features_rural.head()
+df_features = explore_example_parcel(1, df_parcels)
+df_features.head()

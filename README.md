@@ -13,25 +13,16 @@ This is an internal program for Nearmap Solution Engineers to use to quickly acc
 
 Before running the script be sure to see the requirements file for required packages.
 
-Upon running the script the user will be prompted to add an API Key as well as define the bounding box. The program will then be run in the console. Output file will be a geojson package that can be used in arcgis pro or other GIS software. The output file will be saved in the same location as the python program. Save the script in the location where you would like to see output files saved.
+Upon running the script the user will be prompted to complete 4 steps. 
+
+1. Enter an active Nearmap API key
+2. Select a geojson file (2d or 3d)
+3. Select output file location (best practice is to create an empty folder)
+4. Coordinate System (for now simply hit enter to choose default)
+
+Output files will be geojson and json for all AI features avaiable. These will be parsed by feature type as well as one file that contains all possible AI features. A png map will also be added to the folder plotting the returned results. 
 
 
-## Example Input for bounding box 
-
-Formatting is important here. 
-
-```bash
--111.8043139505859 40.56900731858258, 
--111.8042398578515 40.56369670105047, 
--111.7939411278105 40.56377981238411, 
--111.7940154106056 40.5691622974704, 
--111.8043139505859 40.56900731858258
-```
-
-## Example Input API Key
-
-```bash
-Simply use your key in unformatted text, you can copy and paste when asked.
 ``` 
 
 ## Installation
