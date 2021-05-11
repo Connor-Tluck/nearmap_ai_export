@@ -84,24 +84,24 @@ file_defined_name = filedialog.asksaveasfilename(parent=application_window,
                                       filetypes=output_file_types)
 
 
-while True:
-    try:
-        # Note: Python 2.x users should use raw_input, the equivalent of 3.x's input
-        projection = str(input("Please your ESPG code"))
-    except ValueError:
-        print("Sorry, I didn't understand that.")
-        #better try again... Return to the start of the loop
-        continue
-    else:
-        if projection == '':
-            projection = '4326'
-            print('Default Projection System Choosen, 4326')
-            break
-        else:
-        #age was successfully parsed!
-        #we're ready to exit the loop.
-            print("Thanks, your epsg number was set as: " + projection)
-            break
+# while True:
+#     try:
+#         # Note: Python 2.x users should use raw_input, the equivalent of 3.x's input
+#         projection = str(input("Please your ESPG code"))
+#     except ValueError:
+#         print("Sorry, I didn't understand that.")
+#         #better try again... Return to the start of the loop
+#         continue
+#     else:
+#         if projection == '':
+#             projection = '4326'
+#             print('Default Projection System Choosen, 4326')
+#             break
+#         else:
+#         #age was successfully parsed!
+#         #we're ready to exit the loop.
+#             print("Thanks, your epsg number was set as: " + projection)
+#             break
 
 
 
@@ -209,7 +209,7 @@ class_dic = OrderedDict((
     ('Metal Roof', '#b2df8a'),
     ('Shingle Roof', '#fdbf6f'),
     ('Tile Roof','#fb9a99'),
-    ('Medium & High Vegetation (>2m)','#00ff00'),
+    ('Medium and High Vegetation (greater_than_2m)','#00ff00'),
     ('Tree Overhang','#33a02c'),
     ('Solar Panel','#ffff99'),
 ))
@@ -240,12 +240,25 @@ def get_parcel_as_geodataframe(payload, parcel_poly):
         df_features.append(feature_tmp)
 
     df_features = gpd.GeoDataFrame(df_features, crs='EPSG:4326')
-    projection_string = 'EPSG:' + projection
-    df_features = df_features.to_crs(projection_string)
+    # projection_string = 'EPSG:' + projection
+    # df_features = df_features.to_crs(projection_string)
 
-
-    df_features['description'] = pd.Categorical(df_features.description)
+    
+    
+    
+    #clean up the descriptions for windows string compatability issues with '>' and '<'
+    cleaned_feature_descriptions = []
+    for index, row in df_features.iterrows():
+        unprocessed_description = row['description']
+        processed_description = unprocessed_description.replace('>', 'greater than ').replace('<', 'less than ')
+        cleaned_feature_descriptions.append(processed_description)
+    df_features['description'] = cleaned_feature_descriptions
+    
+#     df_features['description'] = pd.Categorical(df_features.description)
     df_features = df_features.sort_values('description')
+    
+    
+#     print(df_features)
     return df_features
 
 def process_payload(payload, poly_obj, out_name, save=True):
@@ -273,7 +286,8 @@ def process_payload_parse(payload, poly_obj, out_name, save=True):
     '''
 
     df_features = get_parcel_as_geodataframe(payload, poly_obj)
-
+    
+   
     if save:
         feature_divided_dict = {}
         for key in df_features['description'].unique():
