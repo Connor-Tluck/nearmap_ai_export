@@ -209,7 +209,7 @@ class_dic = OrderedDict((
     ('Metal Roof', '#b2df8a'),
     ('Shingle Roof', '#fdbf6f'),
     ('Tile Roof','#fb9a99'),
-    ('Medium & High Vegetation (>2m)','#00ff00'),
+    ('Medium & High Vegetation (greater_than_2m)','#00ff00'),
     ('Tree Overhang','#33a02c'),
     ('Solar Panel','#ffff99'),
 ))
@@ -242,9 +242,17 @@ def get_parcel_as_geodataframe(payload, parcel_poly):
     df_features = gpd.GeoDataFrame(df_features, crs='EPSG:4326')
     # projection_string = 'EPSG:' + projection
     # df_features = df_features.to_crs(projection_string)
+    
+    #clean up the descriptions for windows string compatability issues with '>' and '<'
+    cleaned_feature_descriptions = []
+    for index, row in df_features.iterrows():
+        unprocessed_description = row['description']
+        processed_description = unprocessed_description.replace('>', 'greater than ').replace('<', 'less than ')
+        cleaned_feature_descriptions.append(processed_description)
+    df_features['description'] = cleaned_feature_descriptions
 
 
-    df_features['description'] = pd.Categorical(df_features.description)
+#     df_features['description'] = pd.Categorical(df_features.description)
     df_features = df_features.sort_values('description')
     return df_features
 
