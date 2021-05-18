@@ -51,7 +51,7 @@ file_path = filedialog.askopenfilename(parent=application_window,
                                     title="Please select a AOI file, 3D files will be converted, GEOJSON or KML are OKAY",
                                     filetypes=input_file_types)
 
-if file_path.split('.')[1] == 'kml':
+if file_path.split('.')[::1][-1] == 'kml':
 #     #convert from kml to xml
 #     base = os.path.splitext(file_path)[0]
 #     os.rename(my_file, base + '.xml')
