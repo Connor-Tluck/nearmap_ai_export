@@ -209,7 +209,7 @@ class_dic = OrderedDict((
     ('Metal Roof', '#b2df8a'),
     ('Shingle Roof', '#fdbf6f'),
     ('Tile Roof','#fb9a99'),
-    ('Medium and High Vegetation (greater_than_2m)','#00ff00'),
+    ('Medium & High Vegetation (>2m)','#00ff00'),
     ('Tree Overhang','#33a02c'),
     ('Solar Panel','#ffff99'),
 ))
@@ -243,22 +243,9 @@ def get_parcel_as_geodataframe(payload, parcel_poly):
     # projection_string = 'EPSG:' + projection
     # df_features = df_features.to_crs(projection_string)
 
-    
-    
-    
-    #clean up the descriptions for windows string compatability issues with '>' and '<'
-    cleaned_feature_descriptions = []
-    for index, row in df_features.iterrows():
-        unprocessed_description = row['description']
-        processed_description = unprocessed_description.replace('>', 'greater than ').replace('<', 'less than ')
-        cleaned_feature_descriptions.append(processed_description)
-    df_features['description'] = cleaned_feature_descriptions
-    
-#     df_features['description'] = pd.Categorical(df_features.description)
+
+    df_features['description'] = pd.Categorical(df_features.description)
     df_features = df_features.sort_values('description')
-    
-    
-#     print(df_features)
     return df_features
 
 def process_payload(payload, poly_obj, out_name, save=True):
@@ -287,18 +274,27 @@ def process_payload_parse(payload, poly_obj, out_name, save=True):
 
     df_features = get_parcel_as_geodataframe(payload, poly_obj)
     
-   
+    
+
     if save:
         feature_divided_dict = {}
         for key in df_features['description'].unique():
             current_key_df = df_features[df_features['description'] == key]
             feature_divided_dict[key] = current_key_df
+        
+        for feature in list(df_features.description.unique()):
+            parsed_df = df_features[df_features['description'] == feature]
+            parsed_json = parsed_df.to_json()
+            with open(file_defined_name + "_" + f"{feature}.json", 'w') as f:
+                json.dump(parsed_json, f)
+
+
     
         for attribute in feature_divided_dict:
             df_features = feature_divided_dict[attribute]
 
-            with open(file_defined_name + "_" + f"{attribute}.json", 'w') as f:
-                json.dump(payload, f)
+#             with open(file_defined_name + "_" + f"{attribute}.json", 'w') as f:
+#                 json.dump(payload, f)
 
             df_features_saveable = (df_features.assign(
                 description=df_features.description.astype('str'),
