@@ -20,11 +20,11 @@ from tkinter import filedialog
 import sys
 import matplotlib.colors
 from matplotlib import pyplot as plt
-
+import xml.etree.ElementTree as ET
 application_window = tk.Tk()
 
 
-input_file_types = [('all files', '.*'), ('geojson', '.geojson')]
+input_file_types = [('all files', '.*'), ('geojson', '.geojson'), ('kml', '.kml')]
 output_file_types = [('all files', '.*'), ('text files', '.txt')]
 
 
@@ -44,37 +44,91 @@ while True:
 print("Thanks, your api key was set as: " + key)
 
 
-#user select the geojson file to process
+
+
 file_path = filedialog.askopenfilename(parent=application_window,
                                     initialdir=os.getcwd(),
-                                    title="Please select a GEOJSON file, 3D files will be converted",
+                                    title="Please select a AOI file, 3D files will be converted, GEOJSON or KML are OKAY",
                                     filetypes=input_file_types)
-with open(file_path) as f:
-    data = json.loads(f.read())
-    print("Thanks, your geojson is loaded ")
-    print(data)
+
+if file_path.split('.')[1] == 'kml':
+#     #convert from kml to xml
+#     base = os.path.splitext(file_path)[0]
+#     os.rename(my_file, base + '.xml')
+
+#     file_path = my_file
+# print(file_path)
+
+#extract the geometry
+#accept kml, change to xml file path, write to new file, get coordinates, get new boundary. 
+
+
+    root = ET.parse(file_path).getroot()
+
+    for description in root.iter('{http://www.opengis.net/kml/2.2}coordinates'):
+        bounding_box = description.text.strip()
+        print('unmodified')
+        print(bounding_box)
+        bounding_box
+
+    #check if 3d and remove if necessary
+    no_spaces = bounding_box.replace(" ", ",")
+    try:
+        if int(no_spaces.split(',')[2]) == 0:
+            bounding_box = bounding_box.replace(",0 ", " ")
+            bounding_box = bounding_box.replace(",0", "")
+            print(bounding_box)
+            print('3d')
+            
+            working_list = []
+            x = bounding_box.split(' ')
+            for coord in x:
+                working_list.append(coord.replace(',',' '))
+            bounding_box = ', '.join(working_list)   
+            bounding_box
+            print(bounding_box)
+        else:
+            pass
+    except:
+        print('2d')
+        working_list = []
+        x = bounding_box.split(' ')
+        for coord in x:
+            working_list.append(coord.replace(',',' '))
+        bounding_box = ', '.join(working_list)   
+        bounding_box
+        print(bounding_box)
+
+
+else:
+    with open(file_path) as f:
+        data = json.loads(f.read())
+        print("Thanks, your geojson is loaded ")
+        print(data)
     
-    bounding_box = data['features'][0]['geometry']['coordinates'][0]
-    if len(data['features'][0]['geometry']['coordinates'][0][0]) == 3:
-        two_2d_bounding_box = []
-        for i in bounding_box:
-            two_2d_bounding_box.append(i[0:2])
-        bounding_box = two_2d_bounding_box
-    else:
         bounding_box = data['features'][0]['geometry']['coordinates'][0]
-bounding_box
+        if len(data['features'][0]['geometry']['coordinates'][0][0]) == 3:
+            two_2d_bounding_box = []
+            for i in bounding_box:
+                two_2d_bounding_box.append(i[0:2])
+            bounding_box = two_2d_bounding_box
+        else:
+            bounding_box = data['features'][0]['geometry']['coordinates'][0]
+    bounding_box
 
-def geometry_convert(bounding_box):
-    out_string = ''
-    for i in bounding_box:
-        out_string += str(i[0])
-        out_string += ' '
-        out_string += str(i[1])
-        out_string += ', '
-    out_string = out_string[:-2]
-    return(out_string)
-
-bounding_box = geometry_convert(bounding_box)
+    def geometry_convert(bounding_box):
+        out_string = ''
+        for i in bounding_box:
+            out_string += str(i[0])
+            out_string += ' '
+            out_string += str(i[1])
+            out_string += ', '
+        out_string = out_string[:-2]
+        return(out_string)
+    
+    print('THIS IS THE FORMAT')
+    bounding_box = geometry_convert(bounding_box)
+    print(bounding_box)
 
 
 
