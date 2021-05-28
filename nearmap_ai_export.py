@@ -163,8 +163,8 @@ pd.set_option('max_colwidth', 80)
 
 API_KEY = key # Store your Nearmap API Key in an environment variable so it doesn't appear in the notebook.
 
-FEATURES_URL = "https://api.nearmap.com/ai/features/v3/features.json"
-CLASSES_URL = "https://api.nearmap.com/ai/features/v3/classes.json" # Classes is not yet operational on v3.
+FEATURES_URL = "https://api.nearmap.com/ai/features/v4/features.json"
+CLASSES_URL = "https://api.nearmap.com/ai/features/v4/classes.json" # Classes is not yet operational on v4.
 
 import matplotlib.pyplot as plt
 
